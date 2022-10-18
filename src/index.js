@@ -53,6 +53,7 @@ class Game extends React.Component {
       ],
       stepNumber: 0,
       xIsNext: true,
+      movesAscending: true,
     };
   }
 
@@ -92,7 +93,7 @@ class Game extends React.Component {
   render() {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
-    
+
     const winner = calculateWinner(current.squares, current.location);
 
     const moves = history.map((step, move) => {
@@ -114,8 +115,9 @@ class Game extends React.Component {
         </li>
       );
     });
+    if (!this.state.movesAscending)
+      moves.reverse();
 
-    
     let status;
     if (winner) {
       status = "Winner: " + winner;
@@ -134,6 +136,13 @@ class Game extends React.Component {
         </div>
         <div className="game-info">
           <div>{status}</div>
+          <button
+            onClick={() =>
+              this.setState({ movesAscending: !this.state.movesAscending })
+            }
+          >
+            {this.state.movesAscending ? "Sort Descending" : "Sort Ascending"}
+          </button>
           <ol>{moves}</ol>
         </div>
       </div>
@@ -156,7 +165,8 @@ function calculateWinner(squares, currentMoveLocation) {
   for (let i = 0; i < squaresPerRow; i++) {
     // Convert from 2d index to 1d index
     const currentIndex = currentMoveLocation.row * squaresPerRow + i;
-    if (currentIndex === currentMovePosition) // Exclude checking current move
+    if (currentIndex === currentMovePosition)
+      // Exclude checking current move
       continue;
     if (currentSquare !== squares[currentIndex]) {
       hasWinner = false;
@@ -171,7 +181,8 @@ function calculateWinner(squares, currentMoveLocation) {
     for (let i = 0; i < squaresPerRow; i++) {
       // Convert from 2d index to 1d index
       const currentIndex = i * squaresPerRow + currentMoveLocation.col;
-      if (currentIndex === currentMovePosition) // Exclude checking current move
+      if (currentIndex === currentMovePosition)
+        // Exclude checking current move
         continue;
       if (currentSquare !== squares[currentIndex]) {
         hasWinner = false;
@@ -190,7 +201,8 @@ function calculateWinner(squares, currentMoveLocation) {
         if (i === j) {
           // Convert from 2d index to 1d index
           const currentIndex = i * squaresPerRow + j;
-          if (currentIndex === currentMovePosition) // Exclude checking current move
+          if (currentIndex === currentMovePosition)
+            // Exclude checking current move
             continue;
           if (currentSquare !== squares[currentIndex]) {
             hasWinner = false;
@@ -214,7 +226,8 @@ function calculateWinner(squares, currentMoveLocation) {
         if (i + j === squaresPerRow - 1) {
           // Convert from 2d index to 1d index
           const currentIndex = i * squaresPerRow + j;
-          if (currentIndex === currentMovePosition) // Exclude checking current move
+          if (currentIndex === currentMovePosition)
+            // Exclude checking current move
             continue;
           if (currentSquare !== squares[currentIndex]) {
             hasWinner = false;
