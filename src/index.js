@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 
+const squaresPerRow = 5;
+
 function Square(props) {
   return (
     <button className="square" onClick={props.onClick}>
@@ -21,25 +23,16 @@ class Board extends React.Component {
   }
 
   render() {
-    return (
-      <div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-      </div>
-    );
+    const rows = [];
+    for (let i = 0; i < squaresPerRow; i++) {
+      const squares = [];
+      for (let j = i * squaresPerRow; j < (i + 1) * squaresPerRow; j++) {
+        squares.push(this.renderSquare(j));
+      }
+      rows.push(<div className="board-row">{squares}</div>);
+    }
+
+    return <div>{rows}</div>;
   }
 }
 
@@ -47,12 +40,10 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
 
-    this.squaresPerRow = 3;
-
     this.state = {
       history: [
         {
-          squares: Array(9).fill(null),
+          squares: Array(squaresPerRow * squaresPerRow).fill(null),
           location: {
             // Location of each move
             col: null,
@@ -70,12 +61,12 @@ class Game extends React.Component {
     const current = history[history.length - 1];
     const squares = current.squares.slice();
 
-    if (squares[i] || calculateWinner(squares)) return;
+    if (squares[i] || calculateWinner(squares, current.location)) return;
     squares[i] = this.state.xIsNext ? "X" : "O";
 
     // Calculate move's location
-    const row = Math.floor(i / this.squaresPerRow);
-    const col = i - row * this.squaresPerRow;
+    const row = Math.floor(i / squaresPerRow);
+    const col = i - row * squaresPerRow;
     this.setState({
       history: history.concat([
         {
@@ -101,7 +92,8 @@ class Game extends React.Component {
   render() {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
-    const winner = calculateWinner(current.squares);
+    
+    const winner = calculateWinner(current.squares, current.location);
 
     const moves = history.map((step, move) => {
       const desc = move
@@ -123,6 +115,7 @@ class Game extends React.Component {
       );
     });
 
+    
     let status;
     if (winner) {
       status = "Winner: " + winner;
@@ -135,6 +128,7 @@ class Game extends React.Component {
         <div className="game-board">
           <Board
             squares={current.squares}
+            squaresPerRow={squaresPerRow}
             onClick={(i) => this.handleClick(i)}
           />
         </div>
@@ -152,22 +146,84 @@ class Game extends React.Component {
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<Game />);
 
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
+function calculateWinner(squares, currentMoveLocation) {
+  let hasWinner = true;
+  // Convert from 2d position to 1d position
+  const currentMovePosition =
+    currentMoveLocation.row * squaresPerRow + currentMoveLocation.col;
+  const currentSquare = squares[currentMovePosition];
+  // Check all elements on the row
+  for (let i = 0; i < squaresPerRow; i++) {
+    // Convert from 2d index to 1d index
+    const currentIndex = currentMoveLocation.row * squaresPerRow + i;
+    if (currentIndex === currentMovePosition) // Exclude checking current move
+      continue;
+    if (currentSquare !== squares[currentIndex]) {
+      hasWinner = false;
+      break;
     }
   }
-  return null;
+
+  // Hasn't found out the winner yet
+  if (!hasWinner) {
+    hasWinner = true;
+    // Check all elements on the col
+    for (let i = 0; i < squaresPerRow; i++) {
+      // Convert from 2d index to 1d index
+      const currentIndex = i * squaresPerRow + currentMoveLocation.col;
+      if (currentIndex === currentMovePosition) // Exclude checking current move
+        continue;
+      if (currentSquare !== squares[currentIndex]) {
+        hasWinner = false;
+        break;
+      }
+    }
+  }
+
+  // Hasn't found out the winner yet and the element is on the primary diagonal
+  if (currentMoveLocation.row === currentMoveLocation.col && !hasWinner) {
+    hasWinner = true;
+    // Check all elements on the primary diagonal
+    for (let i = 0; i < squaresPerRow; i++) {
+      for (let j = 0; j < squaresPerRow; j++) {
+        // Check if the current position is on the primary diagonal
+        if (i === j) {
+          // Convert from 2d index to 1d index
+          const currentIndex = i * squaresPerRow + j;
+          if (currentIndex === currentMovePosition) // Exclude checking current move
+            continue;
+          if (currentSquare !== squares[currentIndex]) {
+            hasWinner = false;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Hasn't found out the winner yet and the element is on the secondary diagonal
+  if (
+    currentMoveLocation.row + currentMoveLocation.col === squaresPerRow - 1 &&
+    !hasWinner
+  ) {
+    hasWinner = true;
+    // Check all elements on the secondary diagonal
+    for (let i = 0; i < squaresPerRow; i++) {
+      for (let j = 0; j < squaresPerRow; j++) {
+        // Check if the current position is on the secondary diagonal
+        if (i + j === squaresPerRow - 1) {
+          // Convert from 2d index to 1d index
+          const currentIndex = i * squaresPerRow + j;
+          if (currentIndex === currentMovePosition) // Exclude checking current move
+            continue;
+          if (currentSquare !== squares[currentIndex]) {
+            hasWinner = false;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return hasWinner ? currentSquare : null;
 }
