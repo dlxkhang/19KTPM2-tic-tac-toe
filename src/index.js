@@ -6,7 +6,11 @@ const squaresPerRow = 5;
 
 function Square(props) {
   return (
-    <button className="square" onClick={props.onClick}>
+    <button
+      style={props.customStyle}
+      className="square"
+      onClick={props.onClick}
+    >
       {props.value}
     </button>
   );
@@ -16,6 +20,11 @@ class Board extends React.Component {
   renderSquare(i) {
     return (
       <Square
+        customStyle={
+          this.props.squaresCausedWinIndexes.indexOf(i) !== -1
+            ? { backgroundColor: "red" }
+            : {}
+        }
         value={this.props.squares[i]}
         onClick={() => this.props.onClick(i)}
       />
@@ -62,7 +71,7 @@ class Game extends React.Component {
     const current = history[history.length - 1];
     const squares = current.squares.slice();
 
-    if (squares[i] || calculateWinner(squares, current.location)) return;
+    if (squares[i] || calculateWinner(squares, current.location).winner) return;
     squares[i] = this.state.xIsNext ? "X" : "O";
 
     // Calculate move's location
@@ -94,7 +103,8 @@ class Game extends React.Component {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
 
-    const winner = calculateWinner(current.squares, current.location);
+    const result = calculateWinner(current.squares, current.location);
+    const winner = result.winner;
 
     const moves = history.map((step, move) => {
       const desc = move
@@ -115,17 +125,14 @@ class Game extends React.Component {
         </li>
       );
     });
-    if (!this.state.movesAscending)
-      moves.reverse();
+    if (!this.state.movesAscending) moves.reverse();
 
     let status;
     if (winner) {
       status = "Winner: " + winner;
-    }
-    else if (current.squares.indexOf(null) === -1) {
-      status = 'Draw';
-    }
-    else {
+    } else if (current.squares.indexOf(null) === -1) {
+      status = "Draw";
+    } else {
       status = "Next player: " + (this.state.xIsNext ? "X" : "O");
     }
 
@@ -135,6 +142,7 @@ class Game extends React.Component {
           <Board
             squares={current.squares}
             squaresPerRow={squaresPerRow}
+            squaresCausedWinIndexes={result.squaresCausedWinIndexes}
             onClick={(i) => this.handleClick(i)}
           />
         </div>
@@ -160,11 +168,15 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<Game />);
 
 function calculateWinner(squares, currentMoveLocation) {
-  let hasWinner = true;
+  if (currentMoveLocation.row === null || currentMoveLocation.col === null)
+    return { winner: null, squaresCausedWinIndexes: [] };
   // Convert from 2d position to 1d position
   const currentMovePosition =
     currentMoveLocation.row * squaresPerRow + currentMoveLocation.col;
   const currentSquare = squares[currentMovePosition];
+
+  let hasWinner = true;
+  let squaresCausedWinIndexes = [];
   // Check all elements on the row
   for (let i = 0; i < squaresPerRow; i++) {
     // Convert from 2d index to 1d index
@@ -176,11 +188,13 @@ function calculateWinner(squares, currentMoveLocation) {
       hasWinner = false;
       break;
     }
+    squaresCausedWinIndexes.push(currentIndex);
   }
 
   // Hasn't found out the winner yet
   if (!hasWinner) {
     hasWinner = true;
+    squaresCausedWinIndexes = [];
     // Check all elements on the col
     for (let i = 0; i < squaresPerRow; i++) {
       // Convert from 2d index to 1d index
@@ -192,12 +206,16 @@ function calculateWinner(squares, currentMoveLocation) {
         hasWinner = false;
         break;
       }
+      squaresCausedWinIndexes.push(currentIndex);
     }
   }
 
   // Hasn't found out the winner yet and the element is on the primary diagonal
   if (currentMoveLocation.row === currentMoveLocation.col && !hasWinner) {
     hasWinner = true;
+    squaresCausedWinIndexes = [];
+
+    outerLoop:
     // Check all elements on the primary diagonal
     for (let i = 0; i < squaresPerRow; i++) {
       for (let j = 0; j < squaresPerRow; j++) {
@@ -210,8 +228,9 @@ function calculateWinner(squares, currentMoveLocation) {
             continue;
           if (currentSquare !== squares[currentIndex]) {
             hasWinner = false;
-            break;
+            break outerLoop;
           }
+          squaresCausedWinIndexes.push(currentIndex);
         }
       }
     }
@@ -223,7 +242,9 @@ function calculateWinner(squares, currentMoveLocation) {
     !hasWinner
   ) {
     hasWinner = true;
+    squaresCausedWinIndexes = [];
     // Check all elements on the secondary diagonal
+    outerLoop:
     for (let i = 0; i < squaresPerRow; i++) {
       for (let j = 0; j < squaresPerRow; j++) {
         // Check if the current position is on the secondary diagonal
@@ -235,12 +256,21 @@ function calculateWinner(squares, currentMoveLocation) {
             continue;
           if (currentSquare !== squares[currentIndex]) {
             hasWinner = false;
-            break;
+            squaresCausedWinIndexes = [];
+            break outerLoop;
           }
+          squaresCausedWinIndexes.push(currentIndex);
         }
       }
     }
   }
 
-  return hasWinner ? currentSquare : null;
+  if (squaresCausedWinIndexes.length < squaresPerRow - 1)
+    squaresCausedWinIndexes = [];
+  if (squaresCausedWinIndexes.length > 0)
+    squaresCausedWinIndexes.push(currentMovePosition);
+  return {
+    winner: hasWinner ? currentSquare : null,
+    squaresCausedWinIndexes,
+  };
 }
